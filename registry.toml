@@ -1,0 +1,470 @@
+# kpm registry — schema_version 1
+#
+# Extended registry based on https://github.com/wolffshots/kobo-registry
+# with additional Kobo plugins/apps found from community sources.
+#
+# Package definitions only — never binaries; actual install assets come
+# from each package's own release page.
+schema_version = 1
+
+# kpm itself — carries the canonical source so `kpm install kpm --adopt`
+# wires up self-update on-device (closes the bootstrap placeholder in the
+# shipped kpm.toml).
+[packages.kpm]
+name        = "kpm"
+description = "Kobo package manager — install and update mods from the device"
+source      = "github.com/wolffshots/kpm"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+tested_fw   = "4.45.23697"
+nh_name     = "NickelKPM"
+
+# NickelClock ships its KoboRoot.tgz wrapped in a release zip (kpm >= 0.4.0
+# unwraps those) and self-uninstalls when its shipped trigger file is deleted
+# ("delete the uninstall file from the .adds/nickelclock directory, then
+# restart your Kobo" — README).
+[packages.nickelclock]
+name        = "NickelClock"
+description = "Show the current time in the reading header/footer"
+source      = "github.com/shermp/NickelClock"
+forge       = "github"
+asset       = "NickelClock-*.zip"
+min_kpm     = "0.4.0"
+tested_fw   = "4.45.23697"
+nh_name     = "NickelClock"
+
+  [packages.nickelclock.uninstall]
+  method      = "marker-remove"
+  marker_file = "/mnt/onboard/.adds/nickelclock/uninstall"
+  purge_paths = ["/mnt/onboard/.adds/nickelclock/**"]
+
+  # Clock/battery display options; NickelClock re-reads them at boot.
+  [[packages.nickelclock.configs]]
+  name        = "Settings"
+  path        = "/mnt/onboard/.adds/nickelclock/settings.ini"
+  format      = "ini"
+  reload      = "reboot"
+  description = "Clock and battery display options."
+
+# NickelDBus self-uninstalls when its shipped version-marker file is deleted
+# ("delete the file called nickeldbus in the .adds directory, and reboot").
+[packages.nickeldbus]
+name        = "NickelDBus"
+description = "D-Bus interface for scripting and automating the Nickel UI"
+source      = "github.com/shermp/NickelDBus"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+tested_fw   = "4.45.23697"
+nh_name     = "NickelDBus"
+
+  [packages.nickeldbus.uninstall]
+  method      = "marker-remove"
+  marker_file = "/mnt/onboard/.adds/nickeldbus"
+
+# NickelNote ships its KoboRoot.tgz wrapped in a release zip (kpm >= 0.4.0
+# unwraps those). Its documented uninstall is a /mnt/onboard/nn_uninstall
+# trigger file, which sits outside kpm's deletable allowlist (.adds/.kobo only),
+# so removal goes through the manifest instead — the tarball's sole payload is
+# the imageformats plugin, and purge_paths clears the user's templates dir the
+# mod's own uninstaller would have removed.
+[packages.nickelnote]
+name        = "NickelNote"
+description = "Show a custom note on the sleep/lock screen"
+source      = "github.com/onatbas/nickelnote"
+forge       = "github"
+asset       = "NickelNote-*.zip"
+min_kpm     = "0.4.0"
+tested_fw   = "4.38.23429"
+nh_name     = "NickelNote"
+
+  [packages.nickelnote.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/nickelnote/**"]
+
+  # User-created templates: kpm may create them on first save (create = true).
+  [[packages.nickelnote.configs]]
+  name        = "Note content"
+  path        = "/mnt/onboard/.adds/nickelnote/content.template"
+  format      = "text"
+  reload      = "auto"
+  create      = true
+  description = "Rich text shown on the sleep screen. Needs Style too."
+  template = '''
+<span>Your Name</span><br />
+<span style="font-size: 32px">If found, Please return at</span><br />
+<span style="font-size: 32px;">+1 555 000 0000</span>
+'''
+
+  [[packages.nickelnote.configs]]
+  name        = "Style"
+  path        = "/mnt/onboard/.adds/nickelnote/style.template"
+  format      = "text"
+  reload      = "auto"
+  create      = true
+  description = "Stylesheet for the sleep-screen note."
+  template = '''
+#infoWidget {
+  color: black;
+  background-color: rgba(255,255,255,170);
+  min-height: 290px;
+  max-height: 290px;
+
+  margin-top: 200px;
+  margin-left: -30px;
+}
+
+#infoWidget[powerOffView=true]{
+  background-color: rgba(0,0,0,170);
+}
+
+QLabel{
+	min-width: 400px;
+	min-height: 300px;
+}
+'''
+
+  [[packages.nickelnote.configs]]
+  name        = "PIN screen message"
+  path        = "/mnt/onboard/.adds/nickelnote/pin.template"
+  format      = "text"
+  reload      = "auto"
+  create      = true
+  description = "Message shown on the lock-PIN screen."
+  template = '''
+<p style="font-size: 32px;">
+This tablet is protected and belongs to <br/>
+<b>Your Name</b>
+<br/>
+<br/>
+If found, please return to <br/>
+US: +1 555 000 0000<br/>
+CA: +1 555 000 0000<br/>
+</p>
+'''
+
+# Uninstall is NickelMenu's own: create .adds/nm/uninstall and reboot.
+[packages.nickelmenu]
+name        = "NickelMenu"
+description = "Add custom entries to the Kobo home and reading menus"
+source      = "github.com/pgaskin/NickelMenu"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+tested_fw   = "4.45.23697"
+nh_name     = "NickelMenu"
+
+  [packages.nickelmenu.uninstall]
+  method      = "marker"
+  marker_file = "/mnt/onboard/.adds/nm/uninstall"
+
+# Uninstall per README: create .adds/screensaver/uninstall.txt, reboot.
+[packages.nickel-screensaver]
+name        = "Nickel Screensaver"
+description = "Use your own images as the Kobo sleep/screensaver screen"
+source      = "github.com/redphx/nickel-screensaver"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+nh_name     = "Nickel Screensaver"
+
+  [packages.nickel-screensaver.uninstall]
+  method      = "marker"
+  marker_file = "/mnt/onboard/.adds/screensaver/uninstall.txt"
+  extra_paths = ["/mnt/onboard/.kobo/screensaver/nickel-screensaver.png"]
+
+# NickelTypeFix self-uninstalls when its shipped trigger file is deleted.
+[packages.nickeltypefix]
+name        = "NickelTypeFix"
+description = "Correct inconsistent font weights in the Nickel UI"
+source      = "github.com/nicoverbruggen/NickelTypeFix"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+nh_name     = "NickelTypeFix"
+
+  [packages.nickeltypefix.uninstall]
+  method      = "marker-remove"
+  marker_file = "/mnt/onboard/.adds/nickel-type-fix/uninstall"
+  purge_paths = ["/mnt/onboard/.adds/nickel-type-fix/**"]
+
+# NickelHardcover uninstall trigger sits outside deletable allowlist, so use manifest.
+[packages.nickelhardcover]
+name        = "NickelHardcover"
+description = "Sync your Kobo reading progress to a Hardcover account"
+source      = "codeberg.org/StrayRose/NickelHardcover"
+forge       = "forgejo"
+asset       = "KoboRoot.tgz"
+tested_fw   = "4.45.23697"
+nh_name     = "NickelHardcover"
+
+  [packages.nickelhardcover.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/NickelHardcover/**"]
+
+# Requires NickelMenu — menu entries are the way to invoke it.
+[packages.kscribbler]
+name        = "Kscribbler"
+description = "Sync your Kobo highlights and notes to a Hardcover account"
+source      = "github.com/GianniBYoung/kscribbler"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+tested_fw   = "4.45.23697"
+
+  [packages.kscribbler.uninstall]
+  method      = "manifest"
+  extra_paths = ["/mnt/onboard/.adds/nm/kscribbler-debug"]
+  purge_paths = ["/mnt/onboard/.adds/kscribbler/**"]
+
+# Kobo Wi-Fi Remote: KoboRoot.tgz wrapped in release zip (kpm >= 0.4.0 unwraps).
+[packages.kobowifiremote]
+name        = "Kobo Wi-Fi Remote"
+description = "Web-based remote control and page-turner served over Wi-Fi"
+source      = "github.com/sublipri/kobo-wifi-remote"
+forge       = "github"
+asset       = "KoboWiFiRemote-*.zip"
+min_kpm     = "0.4.0"
+
+  [packages.kobowifiremote.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/wifiremote/**"]
+
+# NickelDissolve self-uninstalls when its shipped trigger file is deleted.
+[packages.nickel-dissolve]
+name        = "NickelDissolve"
+description = "Add Kindle-style page-turn animations to supported Kobo devices"
+source      = "github.com/nicoverbruggen/NickelDissolve"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+tested_fw   = "4.45.23697"
+nh_name     = "NickelDissolve"
+
+  [packages.nickel-dissolve.uninstall]
+  method      = "marker-remove"
+  marker_file = "/mnt/onboard/.adds/nickel-dissolve/uninstall"
+  purge_paths = ["/mnt/onboard/.adds/nickel-dissolve/**"]
+
+# NickelSync self-uninstalls when its shipped trigger file is deleted.
+[packages.nickelsync]
+name        = "NickelSync"
+description = "Add a NickelMenu \"Sync now\" item that connects Wi-Fi and starts a Kobo sync, also inside a book"
+source      = "github.com/wolffshots/nickelsync"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+nh_name     = "NickelSync"
+tested_fw   = "4.46.23852"
+
+  [packages.nickelsync.uninstall]
+  method      = "marker-remove"
+  marker_file = "/mnt/onboard/.adds/nickelsync/uninstall"
+  extra_paths = ["/mnt/onboard/.adds/nm/nickelsync"]
+  purge_paths = ["/mnt/onboard/.adds/nickelsync/**"]
+
+  [[packages.nickelsync.configs]]
+  name        = "Settings"
+  path        = "/mnt/onboard/.adds/nickelsync/config.ini"
+  format      = "ini"
+  reload      = "auto"
+  create      = true
+  description = "Wi-Fi connect timeout, whether to turn Wi-Fi off again after a sync, and a quick sync of only the reading position inside a book."
+  template = '''
+[NickelSync]
+; Seconds to wait for a Wi-Fi connection (10 to 180).
+ConnectTimeout=60
+; If Wi-Fi was off before the sync, turn it off again after the sync.
+RestoreWifi=true
+; Inside a book, sync only the reading position and skip the full sync.
+QuickSync=false
+'''
+
+  [packages.nickelsync.checksums]
+  "v0.1.0" = "4459b056ffe3869623f35ff034a44b02f37b0051e726b53576ec737516ee28e3"
+  "v0.2.0" = "b2c3107e8ca78f948573881928d74d0fb189ad6f543f91553aad88656f0d9a77"
+  "v0.2.1" = "b98676c6205ddfc0cf845a431c64063374a58b714fe1acdf15330c4dbea6d622"
+  "v0.3.0" = "97deb4f0aaba9e40499f77d77ad8a5af5d4c215950686e9dc48c7633c4dbdad4"
+
+# NickelHome uninstalls when a trigger file is CREATED.
+[packages.nickel-home]
+name        = "NickelHome"
+description = "Hide configurable widgets and rows on the Kobo home screen"
+source      = "github.com/nicoverbruggen/NickelHome"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+nh_name     = "NickelHome"
+
+  [packages.nickel-home.uninstall]
+  method      = "marker"
+  marker_file = "/mnt/onboard/.adds/nickel-home/uninstall"
+
+# kobo-tweaks conflicts with nickelclock (auto-uninstalls it).
+[packages.kobo-tweaks]
+name        = "Kobo Tweaks"
+description = "Header/footer tweaks, reading widgets, custom bookmarks and dark mode"
+source      = "github.com/redphx/kobo-tweaks"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+conflicts   = ["nickelclock"]
+min_kpm     = "0.10.0"
+nh_name     = "Kobo Tweaks"
+
+  [packages.kobo-tweaks.uninstall]
+  method      = "marker-remove"
+  marker_file = "/mnt/onboard/.adds/tweaks/DELETE_TO_UNINSTALL.txt"
+  purge_paths = ["/mnt/onboard/.adds/tweaks/**"]
+
+# KOReader app-tree package (no KoboRoot.tgz).
+[packages.koreader]
+name        = "KOReader"
+description = "Full-featured alternative document reader (EPUB, PDF, DjVu, CBZ)"
+source      = "github.com/koreader/koreader"
+forge       = "github"
+asset       = "koreader-kobo-*.zip"
+min_kpm     = "0.11.0"
+
+  [packages.koreader.install]
+  method = "app-tree"
+  root   = "koreader"
+  dest   = "/mnt/onboard/.adds/koreader"
+
+    [packages.koreader.install.launcher]
+    nm_file  = "/mnt/onboard/.adds/nm/koreader"
+    nm_entry = "menu_item:main:KOReader:cmd_spawn:quiet:exec /mnt/onboard/.adds/koreader/koreader.sh"
+
+  [packages.koreader.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/koreader/**"]
+
+# Plato app-tree package.
+[packages.plato]
+name        = "Plato"
+description = "Lightweight alternative document reader and library manager"
+source      = "github.com/baskerville/plato"
+forge       = "github"
+asset       = "plato-*.zip"
+min_kpm     = "0.11.0"
+
+  [packages.plato.install]
+  method = "app-tree"
+  dest   = "/mnt/onboard/.adds/plato"
+
+    [packages.plato.install.launcher]
+    nm_file  = "/mnt/onboard/.adds/nm/plato"
+    nm_entry = "menu_item:main:Plato:cmd_spawn:quiet:exec /mnt/onboard/.adds/plato/plato.sh"
+
+  [packages.plato.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/plato/**"]
+
+# Font packages install into /mnt/onboard/fonts (shared dir; reboot required).
+[packages.kf-core-fonts]
+name        = "KF Core fonts"
+description = "Core Collection of reading fonts, tuned for Kobo's kepub renderer (KF builds). Installs into the fonts folder. Reboot after installing or updating."
+source      = "github.com/nicoverbruggen/ebook-fonts"
+forge       = "github"
+asset       = "kobo-core-fonts.zip"
+min_kpm     = "0.12.0"
+homepage    = "https://github.com/nicoverbruggen/ebook-fonts"
+
+  [packages.kf-core-fonts.install]
+  method = "app-tree"
+  dest   = "/mnt/onboard/fonts"
+
+[packages.kf-extra-fonts]
+name        = "KF Extra fonts"
+description = "Extra Collection of reading fonts, tuned for Kobo's kepub renderer (KF builds). Installs into the fonts folder. Reboot after installing or updating."
+source      = "github.com/nicoverbruggen/ebook-fonts"
+forge       = "github"
+asset       = "kobo-extra-fonts.zip"
+min_kpm     = "0.12.0"
+homepage    = "https://github.com/nicoverbruggen/ebook-fonts"
+
+  [packages.kf-extra-fonts.install]
+  method = "app-tree"
+  dest   = "/mnt/onboard/fonts"
+
+# --- Additional packages (extended registry) ---
+
+# KoboCloud publishes releases under the permanent tag "latest", so use rolling updates.
+[packages.kobocloud]
+name         = "KoboCloud"
+description  = "Sync ebooks from Dropbox, Google Drive, Nextcloud/ownCloud, pCloud, Box, and Yandex Disk"
+source       = "github.com/fsantini/KoboCloud"
+forge        = "github"
+asset        = "KoboRoot.tgz"
+update_check = "rolling"
+min_kpm      = "0.10.0"
+homepage     = "https://github.com/fsantini/KoboCloud"
+
+  [packages.kobocloud.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.add/kobocloud/**"]
+
+# KoboMail: send-to-Kobo via email attachments.
+[packages.kobomail]
+name        = "KoboMail"
+description = "Download ebook attachments from an email inbox (send-to-Kobo style)"
+source      = "github.com/clisboa/KoboMail"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+homepage    = "https://github.com/clisboa/KoboMail"
+
+  [packages.kobomail.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/kobomail/**"]
+
+# Kobo-UNCaGED: Calibre wireless/UNCaGED client for Kobo (KFMon/NickelMenu workflow).
+# Release asset is a zip containing the install payload; requires kpm zip unwrap support.
+[packages.kobo-uncaged]
+name        = "Kobo-UNCaGED"
+description = "UNCaGED/Calibre wireless content transfer client for Kobo e-readers"
+source      = "github.com/shermp/Kobo-UNCaGED"
+forge       = "github"
+asset       = "Kobo-UNCaGED.zip"
+min_kpm     = "0.4.0"
+homepage    = "https://github.com/shermp/Kobo-UNCaGED"
+
+  [packages.kobo-uncaged.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/kobo-uncaged/**", "/mnt/onboard/.adds/nm/kobo-uncaged"]
+
+# kobo-btpt: Bluetooth page-turner input for Kobo.
+[packages.kobo-btpt]
+name        = "kobo-btpt"
+description = "Bluetooth page turning support for Kobo eReaders"
+source      = "github.com/tsowell/kobo-btpt"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+homepage    = "https://github.com/tsowell/kobo-btpt"
+
+  [packages.kobo-btpt.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/kobo-btpt/**"]
+
+# kobowriter: simple typewriter/notepad app for Kobo.
+[packages.kobowriter]
+name        = "KoboWriter"
+description = "Simple typewriter/note-taking app for Kobo e-readers"
+source      = "github.com/olup/kobowriter"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+homepage    = "https://github.com/olup/kobowriter"
+
+  [packages.kobowriter.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/kobowriter/**"]
+
+# KoboTerminal: on-device terminal emulator (requires NickelMenu).
+[packages.koboterminal]
+name        = "KoboTerminal"
+description = "On-device terminal emulator for Kobo e-readers (launched via NickelMenu)"
+source      = "github.com/aleritty/koboterminal"
+forge       = "github"
+asset       = "KoboRoot.tgz"
+min_kpm     = "0.4.0"
+homepage    = "https://github.com/aleritty/koboterminal"
+
+  [packages.koboterminal.uninstall]
+  method      = "manifest"
+  purge_paths = ["/mnt/onboard/.adds/koboterminal/**", "/mnt/onboard/.adds/nm/koboterminal"]
